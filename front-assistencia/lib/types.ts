@@ -283,6 +283,23 @@ export type DashboardSummary = {
 };
 
 export type FinanceiroPeriodo = "mes_atual" | "ultimos_30_dias" | "ano_atual" | "todos";
+export type FinanceiroOrigem = "todos" | "os" | "pdv";
+
+export type FinanceiroLancamento = {
+  origem: "OS" | "PDV";
+  id: number;
+  cliente_nome: string;
+  descricao: string;
+  receita: number | string;
+  custo: number | string;
+  data?: string | null;
+  status: string;
+};
+
+export type FinanceiroMovimentacao = Omit<MovimentacaoEstoque, "tipo"> & {
+  tipo: MovimentacaoEstoqueTipo | "estorno_venda";
+  origem: "OS" | "PDV";
+};
 
 export type FinanceiroSummary = {
   periodo: {
@@ -290,16 +307,21 @@ export type FinanceiroSummary = {
     inicio: string | null;
     fim: string | null;
   };
+  origem: FinanceiroOrigem;
   indicadores: {
     receita: number;
     despesas: number;
     saldo: number;
     os_finalizadas: number;
+    vendas_pdv_concluidas: number;
+    lancamentos_total: number;
     ticket_medio: number;
     margem_media_percentual: number;
   };
   os_finalizadas: Orcamento[];
-  movimentacoes_relacionadas: MovimentacaoEstoque[];
+  vendas_pdv: Venda[];
+  lancamentos: FinanceiroLancamento[];
+  movimentacoes_relacionadas: FinanceiroMovimentacao[];
 };
 
 export type ServiceOrder = {

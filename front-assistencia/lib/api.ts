@@ -1,4 +1,4 @@
-import type { Categoria, Cliente, DashboardSummary, DiagnosticoEntrada, DiagnosticoFoto, FinanceiroPeriodo, FinanceiroSummary, MovimentacaoEstoque, MovimentacaoEstoqueTipo, Orcamento, OrcamentoStatus, Produto, SimulacaoCompra, TermoEntrega, TermoEntregaFoto, TestesFinaisEntrega, Venda, VendaFormaPagamento } from "@/lib/types";
+import type { Categoria, Cliente, DashboardSummary, DiagnosticoEntrada, DiagnosticoFoto, FinanceiroOrigem, FinanceiroPeriodo, FinanceiroSummary, MovimentacaoEstoque, MovimentacaoEstoqueTipo, Orcamento, OrcamentoStatus, Produto, SimulacaoCompra, TermoEntrega, TermoEntregaFoto, TestesFinaisEntrega, Venda, VendaFormaPagamento } from "@/lib/types";
 import type { CompanyProfile } from "@/lib/company-profile";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
@@ -248,9 +248,10 @@ export const api = {
     }),
   validarToken: (token: string) => apiFetch<{ user: LoginResponse["user"] }>(apiRoutes.authMe, { token }),
   dashboard: (token: string) => apiFetch<DashboardSummary>(apiRoutes.dashboard, { token }),
-  financeiro: (token: string, params: { periodo?: FinanceiroPeriodo; inicio?: string; fim?: string } = {}) => {
+  financeiro: (token: string, params: { periodo?: FinanceiroPeriodo; origem?: FinanceiroOrigem; inicio?: string; fim?: string } = {}) => {
     const searchParams = new URLSearchParams();
     if (params.periodo) searchParams.set("periodo", params.periodo);
+    if (params.origem) searchParams.set("origem", params.origem);
     if (params.inicio) searchParams.set("inicio", params.inicio);
     if (params.fim) searchParams.set("fim", params.fim);
     const query = searchParams.toString();
