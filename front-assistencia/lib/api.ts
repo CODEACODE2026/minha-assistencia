@@ -1,4 +1,4 @@
-import type { Categoria, Cliente, DashboardSummary, DiagnosticoEntrada, DiagnosticoFoto, FinanceiroPeriodo, FinanceiroSummary, MovimentacaoEstoque, MovimentacaoEstoqueTipo, Orcamento, OrcamentoStatus, Produto, SimulacaoCompra, TermoEntrega, TermoEntregaFoto, TestesFinaisEntrega } from "@/lib/types";
+import type { Categoria, Cliente, DashboardSummary, DiagnosticoEntrada, DiagnosticoFoto, FinanceiroPeriodo, FinanceiroSummary, MovimentacaoEstoque, MovimentacaoEstoqueTipo, Orcamento, OrcamentoStatus, Produto, SimulacaoCompra, TermoEntrega, TermoEntregaFoto, TestesFinaisEntrega, Venda, VendaFormaPagamento } from "@/lib/types";
 import type { CompanyProfile } from "@/lib/company-profile";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
@@ -70,6 +70,17 @@ export type MovimentacaoEstoquePayload = {
   tipo: Extract<MovimentacaoEstoqueTipo, "entrada" | "ajuste_manual">;
   quantidade: number;
   observacao?: string | null;
+};
+
+export type PdvVendaPayload = {
+  cliente_id?: number | null;
+  forma_pagamento: VendaFormaPagamento;
+  desconto?: number;
+  observacao?: string | null;
+  itens: Array<{
+    produto_id: number;
+    quantidade: number;
+  }>;
 };
 
 export type SimulacaoCompraPayload = {
@@ -158,6 +169,7 @@ export const apiRoutes = {
   buscarProdutos: (termo: string) => `/produtos/buscar?termo=${encodeURIComponent(termo)}`,
   movimentacoesEstoque: "/estoque/movimentacoes",
   orcamentos: "/orcamentos",
+  pdvVendas: "/pdv/vendas",
   simuladorCompra: "/simulador-compra",
   termosEntrega: "/termos-entrega",
   whatsappEnviar: "/whatsapp/enviar"
@@ -385,6 +397,13 @@ export const api = {
       method: "DELETE",
       token
     }),
+  criarVendaPdv: (token: string, payload: PdvVendaPayload) =>
+    apiFetch<Venda>(apiRoutes.pdvVendas, {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload)
+    }),
+  vendaPdv: (token: string, id: number) => apiFetch<Venda>(`${apiRoutes.pdvVendas}/${id}`, { token }),
   simulacoesCompra: (token: string) => apiFetch<SimulacaoCompra[]>(apiRoutes.simuladorCompra, { token }),
   criarSimulacaoCompra: (token: string, payload: SimulacaoCompraPayload) =>
     apiFetch<SimulacaoCompra>(apiRoutes.simuladorCompra, {

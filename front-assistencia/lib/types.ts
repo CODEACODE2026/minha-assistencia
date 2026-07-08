@@ -83,6 +83,40 @@ export type MovimentacaoEstoque = {
   updatedAt?: string;
 };
 
+export type VendaFormaPagamento = "pix" | "credito" | "debito" | "dinheiro" | "outro";
+export type VendaStatus = "concluida" | "cancelada";
+
+export type VendaItem = {
+  id: number;
+  venda_id: number;
+  produto_id: number;
+  nome_produto_snapshot: string;
+  quantidade: number;
+  valor_unitario: number | string;
+  valor_total: number | string;
+  custo_unitario_snapshot: number | string;
+  produto?: Produto;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type Venda = {
+  id: number;
+  cliente_id?: number | null;
+  usuario_id?: number | null;
+  subtotal: number | string;
+  desconto: number | string;
+  total: number | string;
+  forma_pagamento: VendaFormaPagamento;
+  status: VendaStatus;
+  observacao?: string | null;
+  cliente?: Cliente | null;
+  itens?: VendaItem[];
+  movimentacoes_estoque?: MovimentacaoEstoque[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type PecaNecessaria = {
   nome: string;
   valor: number;
