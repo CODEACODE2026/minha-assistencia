@@ -243,6 +243,26 @@ export type DashboardSummary = {
   os_recentes: Orcamento[];
 };
 
+export type FinanceiroPeriodo = "mes_atual" | "ultimos_30_dias" | "ano_atual" | "todos";
+
+export type FinanceiroSummary = {
+  periodo: {
+    tipo: FinanceiroPeriodo | "personalizado";
+    inicio: string | null;
+    fim: string | null;
+  };
+  indicadores: {
+    receita: number;
+    despesas: number;
+    saldo: number;
+    os_finalizadas: number;
+    ticket_medio: number;
+    margem_media_percentual: number;
+  };
+  os_finalizadas: Orcamento[];
+  movimentacoes_relacionadas: MovimentacaoEstoque[];
+};
+
 export type ServiceOrder = {
   id: string;
   cliente: string;

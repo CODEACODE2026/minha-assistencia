@@ -1,4 +1,4 @@
-import type { Categoria, Cliente, DashboardSummary, DiagnosticoEntrada, DiagnosticoFoto, MovimentacaoEstoque, MovimentacaoEstoqueTipo, Orcamento, OrcamentoStatus, Produto, SimulacaoCompra, TermoEntrega, TermoEntregaFoto, TestesFinaisEntrega } from "@/lib/types";
+import type { Categoria, Cliente, DashboardSummary, DiagnosticoEntrada, DiagnosticoFoto, FinanceiroPeriodo, FinanceiroSummary, MovimentacaoEstoque, MovimentacaoEstoqueTipo, Orcamento, OrcamentoStatus, Produto, SimulacaoCompra, TermoEntrega, TermoEntregaFoto, TestesFinaisEntrega } from "@/lib/types";
 import type { CompanyProfile } from "@/lib/company-profile";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
@@ -152,6 +152,7 @@ export const apiRoutes = {
   clientes: "/clientes",
   dashboard: "/dashboard",
   diagnosticosEntrada: "/diagnosticos-entrada",
+  financeiro: "/financeiro",
   categorias: "/categorias",
   produtos: "/produtos",
   buscarProdutos: (termo: string) => `/produtos/buscar?termo=${encodeURIComponent(termo)}`,
@@ -231,6 +232,14 @@ export const api = {
     }),
   validarToken: (token: string) => apiFetch<{ user: LoginResponse["user"] }>(apiRoutes.authMe, { token }),
   dashboard: (token: string) => apiFetch<DashboardSummary>(apiRoutes.dashboard, { token }),
+  financeiro: (token: string, params: { periodo?: FinanceiroPeriodo; inicio?: string; fim?: string } = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.periodo) searchParams.set("periodo", params.periodo);
+    if (params.inicio) searchParams.set("inicio", params.inicio);
+    if (params.fim) searchParams.set("fim", params.fim);
+    const query = searchParams.toString();
+    return apiFetch<FinanceiroSummary>(`${apiRoutes.financeiro}${query ? `?${query}` : ""}`, { token });
+  },
   clientes: (token: string) => apiFetch<Cliente[]>(apiRoutes.clientes, { token }),
   criarCliente: (token: string, payload: ClientePayload) =>
     apiFetch<Cliente>(apiRoutes.clientes, {
