@@ -1,4 +1,4 @@
-import type { Categoria, Cliente, DashboardSummary, DiagnosticoEntrada, DiagnosticoFoto, FinanceiroOrigem, FinanceiroPeriodo, FinanceiroSummary, MovimentacaoEstoque, MovimentacaoEstoqueTipo, Orcamento, OrcamentoStatus, Produto, SimulacaoCompra, TermoEntrega, TermoEntregaFoto, TestesFinaisEntrega, Venda, VendaFormaPagamento } from "@/lib/types";
+import type { Categoria, Cliente, DashboardSummary, DiagnosticoEntrada, DiagnosticoFoto, FinanceiroOrigem, FinanceiroPeriodo, FinanceiroSummary, MovimentacaoEstoque, MovimentacaoEstoqueTipo, Orcamento, OrcamentoStatus, PdvVendasResponse, Produto, SimulacaoCompra, TermoEntrega, TermoEntregaFoto, TestesFinaisEntrega, Venda, VendaFormaPagamento, VendaStatusFiltro } from "@/lib/types";
 import type { CompanyProfile } from "@/lib/company-profile";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
@@ -85,6 +85,15 @@ export type PdvVendaPayload = {
 
 export type PdvCancelarVendaPayload = {
   motivo?: string | null;
+};
+
+export type PdvVendasParams = {
+  status?: VendaStatusFiltro;
+  inicio?: string;
+  fim?: string;
+  cliente_id?: number;
+  page?: number;
+  limit?: number;
 };
 
 export type SimulacaoCompraPayload = {
@@ -408,6 +417,17 @@ export const api = {
       token,
       body: JSON.stringify(payload)
     }),
+  vendasPdv: (token: string, params: PdvVendasParams = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.status) searchParams.set("status", params.status);
+    if (params.inicio) searchParams.set("inicio", params.inicio);
+    if (params.fim) searchParams.set("fim", params.fim);
+    if (params.cliente_id) searchParams.set("cliente_id", String(params.cliente_id));
+    if (params.page) searchParams.set("page", String(params.page));
+    if (params.limit) searchParams.set("limit", String(params.limit));
+    const query = searchParams.toString();
+    return apiFetch<PdvVendasResponse>(`${apiRoutes.pdvVendas}${query ? `?${query}` : ""}`, { token });
+  },
   vendaPdv: (token: string, id: number) => apiFetch<Venda>(`${apiRoutes.pdvVendas}/${id}`, { token }),
   cancelarVendaPdv: (token: string, id: number, payload: PdvCancelarVendaPayload = {}) =>
     apiFetch<Venda>(`${apiRoutes.pdvVendas}/${id}/cancelar`, {
@@ -415,6 +435,18 @@ export const api = {
       token,
       body: JSON.stringify(payload)
     }),
+  reciboVendaPdv: async (token: string, id: number) => {
+    const response = await fetch(`${API_URL}${apiRoutes.pdvVendas}/${id}/recibo`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => null)) as Partial<ApiEnvelope<unknown>> | null;
+      throw new ApiRequestError(error?.message ?? `API request failed: ${response.status}`, response.status);
+    }
+
+    return response.blob();
+  },
   simulacoesCompra: (token: string) => apiFetch<SimulacaoCompra[]>(apiRoutes.simuladorCompra, { token }),
   criarSimulacaoCompra: (token: string, payload: SimulacaoCompraPayload) =>
     apiFetch<SimulacaoCompra>(apiRoutes.simuladorCompra, {

@@ -2,14 +2,15 @@
 
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CreditCard, Minus, Plus, QrCode, ReceiptText, Search, Trash2, Wallet, XCircle } from "lucide-react";
+import { CreditCard, Eye, FileDown, Minus, Plus, QrCode, ReceiptText, Search, Trash2, Wallet, XCircle } from "lucide-react";
 import { ApiErrorState } from "@/components/features/api-state";
 import { ProductAutocomplete } from "@/components/features/product-autocomplete";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/table";
 import { api, getStoredAuth } from "@/lib/api";
-import type { Cliente, Produto, Venda, VendaFormaPagamento } from "@/lib/types";
+import type { Cliente, Produto, Venda, VendaFormaPagamento, VendaStatusFiltro } from "@/lib/types";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 type CartItem = {
@@ -22,6 +23,12 @@ const paymentMethods: Array<{ value: VendaFormaPagamento; label: string; icon: t
   { value: "credito", label: "Crédito", icon: CreditCard },
   { value: "debito", label: "Débito", icon: ReceiptText },
   { value: "dinheiro", label: "Dinheiro", icon: Wallet }
+];
+
+const statusFilters: Array<{ value: VendaStatusFiltro; label: string }> = [
+  { value: "todos", label: "Todas" },
+  { value: "concluida", label: "Concluídas" },
+  { value: "cancelada", label: "Canceladas" }
 ];
 
 function toNumber(value: number | string | undefined) {
@@ -104,7 +111,14 @@ export function Checkout() {
   const [showClients, setShowClients] = useState(false);
   const [observacao, setObservacao] = useState("");
   const [lastSale, setLastSale] = useState<Venda | null>(null);
+  const [salesHistory, setSalesHistory] = useState<Venda[]>([]);
+  const [selectedHistorySale, setSelectedHistorySale] = useState<Venda | null>(null);
+  const [statusFilter, setStatusFilter] = useState<VendaStatusFiltro>("todos");
+  const [historyClientId, setHistoryClientId] = useState("");
+  const [historyStart, setHistoryStart] = useState("");
+  const [historyEnd, setHistoryEnd] = useState("");
   const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +148,37 @@ export function Checkout() {
     }
   }, [token]);
 
+  const loadSalesHistory = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+
+    setHistoryLoading(true);
+    setError(null);
+
+    try {
+      const response = await api.vendasPdv(token, {
+        status: statusFilter,
+        inicio: historyStart || undefined,
+        fim: historyEnd || undefined,
+        cliente_id: historyClientId ? Number(historyClientId) : undefined,
+        page: 1,
+        limit: 20
+      });
+      setSalesHistory(response.items);
+      setSelectedHistorySale((current) => {
+        if (!current) {
+          return null;
+        }
+        return response.items.find((sale) => sale.id === current.id) ?? null;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao carregar histórico de vendas.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyClientId, historyEnd, historyStart, statusFilter, token]);
+
   useEffect(() => {
     if (token) {
       void loadData();
@@ -141,6 +186,12 @@ export function Checkout() {
       setLoading(false);
     }
   }, [hydrated, loadData, token]);
+
+  useEffect(() => {
+    if (token) {
+      void loadSalesHistory();
+    }
+  }, [loadSalesHistory, token]);
 
   const productById = useMemo(() => new Map(produtos.map((produto) => [produto.id, produto])), [produtos]);
   const items = useMemo(
@@ -248,6 +299,7 @@ export function Checkout() {
       setDiscount("0");
       setObservacao("");
       await loadData();
+      await loadSalesHistory();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao finalizar venda.");
     } finally {
@@ -278,10 +330,54 @@ export function Checkout() {
       setLastSale(venda);
       setSuccess(`Venda #${venda.id} cancelada e estoque devolvido.`);
       await loadData();
+      await loadSalesHistory();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao cancelar venda.");
     } finally {
       setCanceling(false);
+    }
+  }
+
+  async function cancelHistorySale(venda: Venda) {
+    if (!token || venda.status !== "concluida") {
+      return;
+    }
+
+    if (!window.confirm(`Cancelar a venda #${venda.id} e devolver o estoque dos itens?`)) {
+      return;
+    }
+    const motivo = window.prompt("Motivo do cancelamento (opcional)")?.trim() ?? "";
+
+    setCanceling(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const updatedSale = await api.cancelarVendaPdv(token, venda.id, { motivo: motivo || null });
+      setLastSale(updatedSale);
+      setSelectedHistorySale(updatedSale);
+      setSuccess(`Venda #${updatedSale.id} cancelada pelo histórico.`);
+      await loadData();
+      await loadSalesHistory();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao cancelar venda.");
+    } finally {
+      setCanceling(false);
+    }
+  }
+
+  async function openBackendReceipt(venda: Venda) {
+    if (!token) {
+      return;
+    }
+
+    try {
+      const blob = await api.reciboVendaPdv(token, venda.id);
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 30_000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao gerar recibo PDF.");
     }
   }
 
@@ -294,6 +390,7 @@ export function Checkout() {
   }
 
   return (
+    <>
     <form className="grid gap-5 xl:grid-cols-[1fr_400px]" onSubmit={finishSale}>
       <section className="grid gap-5">
         {error ? <ApiErrorState message={error} onRetry={() => void loadData()} /> : null}
@@ -305,6 +402,10 @@ export function Checkout() {
                 <Button type="button" size="sm" variant="secondary" onClick={() => printReceipt(lastSale)}>
                   <ReceiptText className="h-4 w-4" />
                   Recibo
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => void openBackendReceipt(lastSale)}>
+                  <FileDown className="h-4 w-4" />
+                  PDF
                 </Button>
                 {lastSale.status === "concluida" ? (
                   <Button type="button" size="sm" variant="danger" disabled={canceling} onClick={cancelLastSale}>
@@ -458,5 +559,137 @@ export function Checkout() {
         </Button>
       </aside>
     </form>
+    <section className="mt-6 rounded border bg-card p-5 shadow-subtle">
+      <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+        <div>
+          <h2 className="font-semibold">Histórico de vendas</h2>
+          <p className="text-sm text-muted-foreground">Consulte vendas reais do PDV, gere recibos e cancele quando permitido</p>
+        </div>
+        <div className="grid gap-2 md:grid-cols-[180px_150px_150px_220px_auto] md:items-end">
+          <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+            Status
+            <select className="h-10 rounded border bg-background px-3 text-sm text-foreground" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as VendaStatusFiltro)}>
+              {statusFilters.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Input label="Início" type="date" value={historyStart} onChange={(event) => setHistoryStart(event.target.value)} />
+          <Input label="Fim" type="date" value={historyEnd} onChange={(event) => setHistoryEnd(event.target.value)} />
+          <label className="grid gap-1 text-xs font-medium text-muted-foreground">
+            Cliente
+            <select className="h-10 rounded border bg-background px-3 text-sm text-foreground" value={historyClientId} onChange={(event) => setHistoryClientId(event.target.value)}>
+              <option value="">Todos</option>
+              {clientes.map((cliente) => (
+                <option key={cliente.id} value={cliente.id}>
+                  {cliente.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button type="button" variant="secondary" onClick={() => void loadSalesHistory()}>
+            <Search className="h-4 w-4" />
+            Buscar
+          </Button>
+        </div>
+      </div>
+
+      <DataTable<Venda>
+        loading={historyLoading}
+        data={salesHistory}
+        empty="Nenhuma venda encontrada."
+        columns={[
+          { key: "id", header: "Venda", cell: (row) => <span className="font-semibold">#{row.id}</span> },
+          { key: "status", header: "Status", cell: (row) => <Badge tone={row.status === "concluida" ? "success" : "danger"}>{row.status}</Badge> },
+          { key: "cliente", header: "Cliente", cell: (row) => row.cliente?.nome ?? "Consumidor não identificado" },
+          { key: "itens", header: "Itens", cell: (row) => row.itens?.length ?? 0 },
+          { key: "total", header: "Total", cell: (row) => formatCurrency(row.total) },
+          { key: "data", header: "Data", cell: (row) => (row.createdAt ? formatDateTime(row.createdAt) : "-") },
+          {
+            key: "actions",
+            header: "",
+            cell: (row) => (
+              <div className="flex justify-end gap-2">
+                <Button aria-label="Ver detalhe" title="Ver detalhe" type="button" size="icon" variant="secondary" onClick={() => setSelectedHistorySale(row)}>
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button aria-label="PDF" title="PDF" type="button" size="icon" variant="secondary" onClick={() => void openBackendReceipt(row)}>
+                  <FileDown className="h-4 w-4" />
+                </Button>
+                {row.status === "concluida" ? (
+                  <Button aria-label="Cancelar venda" title="Cancelar venda" type="button" size="icon" variant="danger" disabled={canceling} onClick={() => void cancelHistorySale(row)}>
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                ) : null}
+              </div>
+            )
+          }
+        ]}
+      />
+
+      {selectedHistorySale ? (
+        <section className="mt-5 rounded border bg-background p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 className="font-semibold">Venda #{selectedHistorySale.id}</h3>
+              <p className="text-sm text-muted-foreground">
+                {selectedHistorySale.cliente?.nome ?? "Consumidor não identificado"} · {selectedHistorySale.createdAt ? formatDateTime(selectedHistorySale.createdAt) : "-"}
+              </p>
+              {selectedHistorySale.status === "cancelada" ? (
+                <p className="mt-1 text-xs text-rose-600">
+                  Cancelada{selectedHistorySale.cancelado_em ? ` em ${formatDateTime(selectedHistorySale.cancelado_em)}` : ""}
+                  {selectedHistorySale.motivo_cancelamento ? ` · ${selectedHistorySale.motivo_cancelamento}` : ""}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="secondary" onClick={() => printReceipt(selectedHistorySale)}>
+                <ReceiptText className="h-4 w-4" />
+                Print
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => void openBackendReceipt(selectedHistorySale)}>
+                <FileDown className="h-4 w-4" />
+                PDF
+              </Button>
+              {selectedHistorySale.status === "concluida" ? (
+                <Button type="button" size="sm" variant="danger" disabled={canceling} onClick={() => void cancelHistorySale(selectedHistorySale)}>
+                  <XCircle className="h-4 w-4" />
+                  Cancelar
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          <DataTable
+            data={selectedHistorySale.itens ?? []}
+            empty="Venda sem itens."
+            columns={[
+              { key: "produto", header: "Produto", cell: (row) => row.nome_produto_snapshot },
+              { key: "quantidade", header: "Qtd.", cell: (row) => row.quantidade },
+              { key: "unitario", header: "Unitário", cell: (row) => formatCurrency(row.valor_unitario) },
+              { key: "total", header: "Total", cell: (row) => formatCurrency(row.valor_total) }
+            ]}
+          />
+
+          <div className="mt-4 grid gap-2 text-sm md:ml-auto md:w-80">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Subtotal</span>
+              <strong>{formatCurrency(selectedHistorySale.subtotal)}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Desconto</span>
+              <strong>{formatCurrency(selectedHistorySale.desconto)}</strong>
+            </div>
+            <div className="flex justify-between border-t pt-2 text-base">
+              <span className="font-semibold">Total</span>
+              <strong>{formatCurrency(selectedHistorySale.total)}</strong>
+            </div>
+          </div>
+        </section>
+      ) : null}
+    </section>
+    </>
   );
 }

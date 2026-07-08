@@ -122,6 +122,18 @@ export type Venda = {
   updatedAt?: string;
 };
 
+export type VendaStatusFiltro = VendaStatus | "todos";
+
+export type PdvVendasResponse = {
+  items: Venda[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
 export type PecaNecessaria = {
   nome: string;
   valor: number;
