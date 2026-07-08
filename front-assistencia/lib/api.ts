@@ -83,6 +83,10 @@ export type PdvVendaPayload = {
   }>;
 };
 
+export type PdvCancelarVendaPayload = {
+  motivo?: string | null;
+};
+
 export type SimulacaoCompraPayload = {
   modelo_aparelho: string;
   valor_compra: number;
@@ -404,6 +408,12 @@ export const api = {
       body: JSON.stringify(payload)
     }),
   vendaPdv: (token: string, id: number) => apiFetch<Venda>(`${apiRoutes.pdvVendas}/${id}`, { token }),
+  cancelarVendaPdv: (token: string, id: number, payload: PdvCancelarVendaPayload = {}) =>
+    apiFetch<Venda>(`${apiRoutes.pdvVendas}/${id}/cancelar`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload)
+    }),
   simulacoesCompra: (token: string) => apiFetch<SimulacaoCompra[]>(apiRoutes.simuladorCompra, { token }),
   criarSimulacaoCompra: (token: string, payload: SimulacaoCompraPayload) =>
     apiFetch<SimulacaoCompra>(apiRoutes.simuladorCompra, {

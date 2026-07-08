@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CreditCard, Minus, Plus, QrCode, ReceiptText, Search, Trash2, Wallet } from "lucide-react";
+import { CreditCard, Minus, Plus, QrCode, ReceiptText, Search, Trash2, Wallet, XCircle } from "lucide-react";
 import { ApiErrorState } from "@/components/features/api-state";
 import { ProductAutocomplete } from "@/components/features/product-autocomplete";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ function receiptHtml(venda: Venda) {
     <div class="muted">${venda.createdAt ? formatDateTime(venda.createdAt) : ""}</div>
     <p><strong>Cliente:</strong> ${venda.cliente?.nome ?? "Consumidor não identificado"}</p>
     <p><strong>Forma de pagamento:</strong> ${venda.forma_pagamento}</p>
+    <p><strong>Status:</strong> ${venda.status}</p>
     <table>
       <thead><tr><th>Item</th><th>Qtd.</th><th>Unitário</th><th>Total</th></tr></thead>
       <tbody>
@@ -105,6 +106,7 @@ export function Checkout() {
   const [lastSale, setLastSale] = useState<Venda | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -253,6 +255,36 @@ export function Checkout() {
     }
   }
 
+  async function cancelLastSale() {
+    if (!token || !lastSale) {
+      return;
+    }
+    if (lastSale.status !== "concluida") {
+      setError("Venda ja esta cancelada.");
+      return;
+    }
+
+    if (!window.confirm(`Cancelar a venda #${lastSale.id} e devolver o estoque dos itens?`)) {
+      return;
+    }
+    const motivo = window.prompt("Motivo do cancelamento (opcional)")?.trim() ?? "";
+
+    setCanceling(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const venda = await api.cancelarVendaPdv(token, lastSale.id, { motivo: motivo || null });
+      setLastSale(venda);
+      setSuccess(`Venda #${venda.id} cancelada e estoque devolvido.`);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao cancelar venda.");
+    } finally {
+      setCanceling(false);
+    }
+  }
+
   if (!hydrated || loading) {
     return <DataTable<Produto> loading data={[]} columns={[{ key: "loading", header: "PDV", cell: () => null }]} />;
   }
@@ -267,12 +299,24 @@ export function Checkout() {
         {error ? <ApiErrorState message={error} onRetry={() => void loadData()} /> : null}
         {success ? (
           <section className="rounded border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
-            {success}
+            <span>{success}</span>
             {lastSale ? (
-              <Button className="ml-3" type="button" size="sm" variant="secondary" onClick={() => printReceipt(lastSale)}>
-                <ReceiptText className="h-4 w-4" />
-                Recibo
-              </Button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="secondary" onClick={() => printReceipt(lastSale)}>
+                  <ReceiptText className="h-4 w-4" />
+                  Recibo
+                </Button>
+                {lastSale.status === "concluida" ? (
+                  <Button type="button" size="sm" variant="danger" disabled={canceling} onClick={cancelLastSale}>
+                    <XCircle className="h-4 w-4" />
+                    {canceling ? "Cancelando..." : "Cancelar venda"}
+                  </Button>
+                ) : (
+                  <span className="rounded border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+                    Venda cancelada{lastSale.cancelado_em ? ` em ${formatDateTime(lastSale.cancelado_em)}` : ""}
+                  </span>
+                )}
+              </div>
             ) : null}
           </section>
         ) : null}

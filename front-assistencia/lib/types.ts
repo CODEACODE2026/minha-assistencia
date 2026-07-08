@@ -73,6 +73,8 @@ export type MovimentacaoEstoque = {
   id: number;
   produto_id: number;
   orcamento_id?: number | null;
+  venda_id?: number | null;
+  venda_item_id?: number | null;
   tipo: MovimentacaoEstoqueTipo;
   quantidade: number;
   estoque_anterior: number;
@@ -110,6 +112,9 @@ export type Venda = {
   forma_pagamento: VendaFormaPagamento;
   status: VendaStatus;
   observacao?: string | null;
+  cancelado_em?: string | null;
+  motivo_cancelamento?: string | null;
+  cancelado_por_usuario_id?: number | null;
   cliente?: Cliente | null;
   itens?: VendaItem[];
   movimentacoes_estoque?: MovimentacaoEstoque[];
