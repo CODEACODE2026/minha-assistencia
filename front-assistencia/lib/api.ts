@@ -358,6 +358,7 @@ export const api = {
       body: JSON.stringify(payload)
     }),
   orcamentos: (token: string) => apiFetch<Orcamento[]>(apiRoutes.orcamentos, { token }),
+  orcamento: (token: string, id: number) => apiFetch<Orcamento>(`${apiRoutes.orcamentos}/${id}`, { token }),
   criarOrcamento: (token: string, payload: OrcamentoPayload) =>
     apiFetch<Orcamento>(apiRoutes.orcamentos, {
       method: "POST",

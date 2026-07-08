@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Dependencies
 node_modules/
 **/node_modules/
@@ -59,3 +60,12 @@ coverage/
 **/.vscode/
 .DS_Store
 Thumbs.db
+=======
+node_modules
+dist
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+>>>>>>> 4a864f338e720fedb81593f21e7e7a8db639f058
