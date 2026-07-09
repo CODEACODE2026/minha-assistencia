@@ -1,11 +1,33 @@
+import { existsSync } from 'node:fs';
+
 import puppeteer, { PDFOptions } from 'puppeteer';
 
 const defaultTimeoutMs = Number(process.env.PUPPETEER_TIMEOUT_MS || 30000);
 
+function resolveExecutablePath() {
+  const configuredPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+
+  if (configuredPath) {
+    if (existsSync(configuredPath)) {
+      return configuredPath;
+    }
+
+    console.warn(`PUPPETEER_EXECUTABLE_PATH ignorado porque o arquivo nao existe: ${configuredPath}`);
+  }
+
+  if (process.platform === 'linux') {
+    const candidates = ['/usr/bin/chromium-browser', '/snap/bin/chromium', '/usr/bin/chromium', '/usr/bin/google-chrome-stable'];
+    return candidates.find((candidate) => existsSync(candidate));
+  }
+
+  return undefined;
+}
+
 export async function renderHtmlToPdf(html: string, options: PDFOptions = {}) {
+  const executablePath = resolveExecutablePath();
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    executablePath,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     timeout: defaultTimeoutMs
   });
