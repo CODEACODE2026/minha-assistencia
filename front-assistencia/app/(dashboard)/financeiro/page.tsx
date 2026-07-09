@@ -29,7 +29,7 @@ function FinanceLoading() {
   return (
     <>
       <PageHeader title="Financeiro" description="Faturamento, custos e movimentações recentes" />
-      <div className="mb-6 grid gap-4 md:grid-cols-3 xl:grid-cols-5">
+      <div className="mb-6 grid min-w-0 gap-4 md:grid-cols-3 xl:grid-cols-5">
         {Array.from({ length: 5 }).map((_, index) => (
           <section key={index} className="rounded border bg-card p-4 shadow-subtle">
             <Skeleton className="h-4 w-28" />
@@ -38,7 +38,9 @@ function FinanceLoading() {
         ))}
       </div>
       <Skeleton className="mb-6 h-16" />
-      <DataTable<Orcamento> loading data={[]} columns={[{ key: "loading", header: "Financeiro", cell: () => null }]} />
+      <section className="min-w-0 max-w-full overflow-hidden">
+        <DataTable<Orcamento> loading data={[]} columns={[{ key: "loading", header: "Financeiro", cell: () => null }]} />
+      </section>
     </>
   );
 }
@@ -150,17 +152,17 @@ export default function FinancePage() {
     <>
       <PageHeader title="Financeiro" description="Faturamento, custos e movimentações recentes" />
 
-      <div className="mb-6 flex flex-col gap-3 rounded border bg-card p-3 shadow-subtle lg:flex-row lg:items-center lg:justify-between">
+      <div className="mb-6 flex min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded border bg-card p-3 shadow-subtle lg:flex-row lg:items-center lg:justify-between">
         <div className="grid gap-1">
-          <div className="flex items-center gap-2 text-sm font-medium">
+          <div className="flex min-w-0 items-center gap-2 text-sm font-medium">
             <CalendarDays className="h-4 w-4 text-primary" />
-            Período e origem
+            <span className="min-w-0 break-words">Período e origem</span>
           </div>
           <p className="text-xs text-muted-foreground">
             {financeiro.indicadores.os_finalizadas} OS finalizadas · {financeiro.indicadores.vendas_pdv_concluidas} vendas PDV
           </p>
         </div>
-        <div className="flex flex-col gap-2 lg:items-end">
+        <div className="flex min-w-0 flex-col gap-2 lg:items-end">
           <div className="flex flex-wrap gap-2">
             {periodOptions.map((option) => (
               <button
@@ -190,7 +192,7 @@ export default function FinancePage() {
         </div>
       </div>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-6 grid min-w-0 max-w-full gap-4 md:grid-cols-2 xl:grid-cols-5">
         {metrics.map((card) => {
           const Icon = card.icon;
           return <MetricCard key={card.label} label={card.label} value={card.value} change={card.change} icon={<Icon className="h-5 w-5" />} />;
@@ -203,9 +205,9 @@ export default function FinancePage() {
         </section>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <section>
-          <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="grid min-w-0 max-w-full gap-6 overflow-hidden xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <section className="min-w-0 overflow-hidden">
+          <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
             <h2 className="font-semibold">Lançamentos</h2>
             <Badge tone="info">{financeiro.lancamentos.length} registros</Badge>
           </div>
@@ -219,8 +221,8 @@ export default function FinancePage() {
                 cell: (row) => <Badge tone={row.origem === "PDV" ? "success" : "info"}>{row.origem}</Badge>
               },
               { key: "id", header: "Registro", cell: (row) => <span className="font-semibold">#{row.id}</span> },
-              { key: "cliente", header: "Cliente", cell: (row) => row.cliente_nome },
-              { key: "descricao", header: "Descrição", cell: (row) => row.descricao },
+              { key: "cliente", header: "Cliente", className: "max-w-[12rem] whitespace-normal break-words", cell: (row) => row.cliente_nome },
+              { key: "descricao", header: "Descrição", className: "max-w-[14rem] whitespace-normal break-words", cell: (row) => row.descricao },
               { key: "receita", header: "Receita", cell: (row) => formatCurrency(row.receita) },
               { key: "custo", header: "Custo", cell: (row) => formatCurrency(row.custo) },
               { key: "data", header: "Data", cell: (row) => (row.data ? formatDateTime(row.data) : "-") }
@@ -228,8 +230,8 @@ export default function FinancePage() {
           />
         </section>
 
-        <section>
-          <div className="mb-3 flex items-center justify-between gap-3">
+        <section className="min-w-0 overflow-hidden">
+          <div className="mb-3 flex min-w-0 items-center justify-between gap-3">
             <h2 className="font-semibold">Movimentações relacionadas</h2>
             <Badge tone="info">{financeiro.movimentacoes_relacionadas.length} registros</Badge>
           </div>
@@ -239,7 +241,12 @@ export default function FinancePage() {
             columns={[
               { key: "origem", header: "Origem", cell: (row) => <Badge tone={row.origem === "PDV" ? "success" : "info"}>{row.origem}</Badge> },
               { key: "tipo", header: "Tipo", cell: (row) => movementLabel(row.tipo) },
-              { key: "produto", header: "Produto", cell: (row) => row.produto?.nome ?? `Produto #${row.produto_id}` },
+              {
+                key: "produto",
+                header: "Produto",
+                className: "max-w-[14rem] whitespace-normal break-words",
+                cell: (row) => row.produto?.nome ?? `Produto #${row.produto_id}`
+              },
               { key: "quantidade", header: "Qtd.", cell: (row) => row.quantidade },
               { key: "valor", header: "Custo estimado", cell: (row) => formatCurrency(movementValue(row)) },
               { key: "data", header: "Data", cell: (row) => (row.createdAt ? formatDateTime(row.createdAt) : "-") }
