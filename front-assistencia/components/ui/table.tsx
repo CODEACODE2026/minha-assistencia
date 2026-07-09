@@ -22,7 +22,7 @@ export function DataTable<T>({ columns, data, loading, empty = "Nenhum registro 
   }
 
   return (
-    <div className="overflow-x-auto rounded border bg-card shadow-subtle">
+    <div className="w-full max-w-full overflow-x-auto rounded border bg-card shadow-subtle">
       <table className="min-w-full divide-y divide-border text-sm">
         <thead className="bg-muted/70">
           <tr>

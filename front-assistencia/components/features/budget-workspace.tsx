@@ -365,7 +365,7 @@ export function BudgetWorkspace() {
 
   return (
     <>
-      <div className="grid gap-5">
+      <div className="grid min-w-0 max-w-full gap-5 overflow-hidden">
         {error ? <ApiErrorState message={error} onRetry={() => void loadData()} /> : null}
         {success ? (
           <section className="rounded border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
@@ -380,14 +380,30 @@ export function BudgetWorkspace() {
           </Button>
         </div>
 
-        <DataTable<Orcamento>
-          data={orcamentos}
-          empty="Nenhum orcamento cadastrado."
-          columns={[
+        <section className="min-w-0 max-w-full overflow-hidden">
+          <DataTable<Orcamento>
+            data={orcamentos}
+            empty="Nenhum orcamento cadastrado."
+            columns={[
             { key: "id", header: "Orcamento", cell: (row) => <span className="font-semibold">#{row.id}</span> },
-            { key: "cliente", header: "Cliente", cell: (row) => row.cliente?.nome ?? `Cliente #${row.cliente_id}` },
-            { key: "aparelho", header: "Aparelho", cell: (row) => row.aparelho },
-            { key: "servico", header: "Servico", cell: (row) => row.servico },
+            {
+              key: "cliente",
+              header: "Cliente",
+              className: "max-w-[12rem] whitespace-normal break-words",
+              cell: (row) => row.cliente?.nome ?? `Cliente #${row.cliente_id}`
+            },
+            {
+              key: "aparelho",
+              header: "Aparelho",
+              className: "max-w-[11rem] whitespace-normal break-words",
+              cell: (row) => row.aparelho
+            },
+            {
+              key: "servico",
+              header: "Servico",
+              className: "max-w-[14rem] whitespace-normal break-words",
+              cell: (row) => row.servico
+            },
             {
               key: "status",
               header: "Status",
@@ -416,7 +432,7 @@ export function BudgetWorkspace() {
               key: "action",
               header: "",
               cell: (row) => (
-                <div className="flex justify-end gap-2">
+                <div className="flex min-w-max justify-end gap-2">
                   {row.status === "aberto" ? (
                     <Button aria-label="Virar OS" title="Virar OS" size="icon" disabled={saving} variant="secondary" onClick={() => void approveBudgetAsServiceOrder(row)}>
                       <CheckCircle2 className="h-4 w-4" />
@@ -441,12 +457,13 @@ export function BudgetWorkspace() {
                 </div>
               )
             }
-          ]}
-        />
+            ]}
+          />
+        </section>
       </div>
 
-      <Modal open={open} title={editing ? "Editar orcamento" : "Gerar orcamento"} className="max-w-5xl" onClose={() => setOpen(false)}>
-        <form className="grid gap-4" onSubmit={handleSubmit}>
+      <Modal open={open} title={editing ? "Editar orcamento" : "Gerar orcamento"} className="max-w-5xl overflow-x-hidden" onClose={() => setOpen(false)}>
+        <form className="grid min-w-0 gap-4" onSubmit={handleSubmit}>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-[34px] h-4 w-4 text-muted-foreground" />
             <Input
@@ -537,8 +554,8 @@ export function BudgetWorkspace() {
             <div className="grid gap-2">
               {parts.length ? (
                 parts.map((part) => (
-                  <div key={part.produto_id} className="grid gap-2 rounded border bg-muted/30 p-2 sm:grid-cols-[1fr_90px_120px_auto] sm:items-center">
-                    <span className="text-sm font-medium">{part.nome}</span>
+                  <div key={part.produto_id} className="grid min-w-0 gap-2 rounded border bg-muted/30 p-2 sm:grid-cols-[minmax(0,1fr)_90px_120px_auto] sm:items-center">
+                    <span className="min-w-0 break-words text-sm font-medium">{part.nome}</span>
                     <Input
                       aria-label={`Quantidade de ${part.nome}`}
                       type="number"
@@ -584,7 +601,7 @@ export function BudgetWorkspace() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
