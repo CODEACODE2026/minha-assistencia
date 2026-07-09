@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { DataTable } from "@/components/ui/table";
 import { api, getStoredAuth } from "@/lib/api";
+import { getStoredCompanyProfile } from "@/lib/company-profile";
 import type { Cliente, Produto, Venda, VendaFormaPagamento, VendaStatusFiltro } from "@/lib/types";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 
@@ -115,8 +116,12 @@ export function Checkout() {
   const [selectedHistorySale, setSelectedHistorySale] = useState<Venda | null>(null);
   const [statusFilter, setStatusFilter] = useState<VendaStatusFiltro>("todos");
   const [historyClientId, setHistoryClientId] = useState("");
+  const [historyTerm, setHistoryTerm] = useState("");
   const [historyStart, setHistoryStart] = useState("");
   const [historyEnd, setHistoryEnd] = useState("");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -162,10 +167,13 @@ export function Checkout() {
         inicio: historyStart || undefined,
         fim: historyEnd || undefined,
         cliente_id: historyClientId ? Number(historyClientId) : undefined,
-        page: 1,
+        termo: historyTerm.trim() || undefined,
+        page: historyPage,
         limit: 20
       });
       setSalesHistory(response.items);
+      setHistoryTotal(response.pagination.total);
+      setHistoryTotalPages(Math.max(response.pagination.totalPages, 1));
       setSelectedHistorySale((current) => {
         if (!current) {
           return null;
@@ -177,7 +185,11 @@ export function Checkout() {
     } finally {
       setHistoryLoading(false);
     }
-  }, [historyClientId, historyEnd, historyStart, statusFilter, token]);
+  }, [historyClientId, historyEnd, historyPage, historyStart, historyTerm, statusFilter, token]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historyClientId, historyEnd, historyStart, historyTerm, statusFilter]);
 
   useEffect(() => {
     if (token) {
@@ -372,7 +384,8 @@ export function Checkout() {
     }
 
     try {
-      const blob = await api.reciboVendaPdv(token, venda.id);
+      const company = getStoredCompanyProfile();
+      const blob = await api.reciboVendaPdv(token, venda.id, company);
       const url = window.URL.createObjectURL(blob);
       window.open(url, "_blank", "noopener,noreferrer");
       window.setTimeout(() => window.URL.revokeObjectURL(url), 30_000);
@@ -565,7 +578,7 @@ export function Checkout() {
           <h2 className="font-semibold">Histórico de vendas</h2>
           <p className="text-sm text-muted-foreground">Consulte vendas reais do PDV, gere recibos e cancele quando permitido</p>
         </div>
-        <div className="grid gap-2 md:grid-cols-[180px_150px_150px_220px_auto] md:items-end">
+        <div className="grid gap-2 md:grid-cols-[180px_150px_150px_220px_220px_auto] md:items-end">
           <label className="grid gap-1 text-xs font-medium text-muted-foreground">
             Status
             <select className="h-10 rounded border bg-background px-3 text-sm text-foreground" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as VendaStatusFiltro)}>
@@ -578,6 +591,7 @@ export function Checkout() {
           </label>
           <Input label="Início" type="date" value={historyStart} onChange={(event) => setHistoryStart(event.target.value)} />
           <Input label="Fim" type="date" value={historyEnd} onChange={(event) => setHistoryEnd(event.target.value)} />
+          <Input label="Busca" value={historyTerm} onChange={(event) => setHistoryTerm(event.target.value)} placeholder="Cliente ou produto" />
           <label className="grid gap-1 text-xs font-medium text-muted-foreground">
             Cliente
             <select className="h-10 rounded border bg-background px-3 text-sm text-foreground" value={historyClientId} onChange={(event) => setHistoryClientId(event.target.value)}>
@@ -628,6 +642,26 @@ export function Checkout() {
           }
         ]}
       />
+
+      <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+        <span>
+          Página {historyPage} de {historyTotalPages} · {historyTotal} venda(s)
+        </span>
+        <div className="flex gap-2">
+          <Button type="button" size="sm" variant="secondary" disabled={historyPage <= 1 || historyLoading} onClick={() => setHistoryPage((page) => Math.max(1, page - 1))}>
+            Anterior
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={historyPage >= historyTotalPages || historyLoading}
+            onClick={() => setHistoryPage((page) => Math.min(historyTotalPages, page + 1))}
+          >
+            Próxima
+          </Button>
+        </div>
+      </div>
 
       {selectedHistorySale ? (
         <section className="mt-5 rounded border bg-background p-4">

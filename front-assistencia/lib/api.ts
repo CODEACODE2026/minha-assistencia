@@ -92,6 +92,7 @@ export type PdvVendasParams = {
   inicio?: string;
   fim?: string;
   cliente_id?: number;
+  termo?: string;
   page?: number;
   limit?: number;
 };
@@ -423,6 +424,7 @@ export const api = {
     if (params.inicio) searchParams.set("inicio", params.inicio);
     if (params.fim) searchParams.set("fim", params.fim);
     if (params.cliente_id) searchParams.set("cliente_id", String(params.cliente_id));
+    if (params.termo) searchParams.set("termo", params.termo);
     if (params.page) searchParams.set("page", String(params.page));
     if (params.limit) searchParams.set("limit", String(params.limit));
     const query = searchParams.toString();
@@ -435,9 +437,14 @@ export const api = {
       token,
       body: JSON.stringify(payload)
     }),
-  reciboVendaPdv: async (token: string, id: number) => {
+  reciboVendaPdv: async (token: string, id: number, company?: CompanyProfile) => {
     const response = await fetch(`${API_URL}${apiRoutes.pdvVendas}/${id}/recibo`, {
-      headers: { Authorization: `Bearer ${token}` }
+      method: company ? "POST" : "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(company ? { "Content-Type": "application/json" } : {})
+      },
+      ...(company ? { body: JSON.stringify({ company }) } : {})
     });
 
     if (!response.ok) {
